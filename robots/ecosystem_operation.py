@@ -21,6 +21,8 @@ es = ecofactory(robots = 3, droids = 3, drones = 3, chargers = [55,20], pizzas =
 
 
 
+
+
 charger = es.chargers()[0]
 es.display(show = 1, pause = 10)                                                # show = 0 will turn off the display and speed up the run. Set to 1 for development and debugging, set to 0 for final runs. Note that when show = 0, you will not see the ecosystem or any messages, so it is wise to turn on messages (es.messages_on = True) when show = 0 for development and debugging. 
 es.debug = False                                                                # this will directly display damage and warning messages. Note show needs to be zero  (show = 0)
