@@ -6,7 +6,7 @@ demonstrating the use of the ecosystem factory and deliverable creation function
 It simulates the operation of delivery bots, including charging and delivering pizzas, while providing options for debugging and message display.
 """
 
-from robots.ecosystem.factory import ecofactory
+from .ecosystem.factory import *
 
 # Duration is set to two weeks for development and rapid testing. Set to 52 weeks for your final tests.
 

@@ -16,6 +16,7 @@ const unsigned int sampling_duration_sec = 180;
 // that may have similar names
 const size_t SAMPLE_COUNT = sampling_freq_hz * sampling_duration_sec;
 float TEMP_DATA[SAMPLE_COUNT];
+float TIME_DATA[SAMPLE_COUNT];
 
 
 float temperature_read()
@@ -28,13 +29,21 @@ float temperature_read()
 }
 
 void record_temperatures(){
+
+  unsigned long start_time = millis();
+
   float delay_ms = 1000 / sampling_freq_hz; // Avoid recalculating within the loop
   for (size_t i = 0; i < SAMPLE_COUNT; i++){
+    unsigned long current_time = millis();
+    float dt = (current_time - start_time) / 1000.0f;
     TEMP_DATA[i] = temperature_read();
+    TIME_DATA[i] = dt;
     delay(delay_ms);
   }
 }
 
 void setup(){
   Serial.begin(9600);
+
+  record_temperatures();
 }
