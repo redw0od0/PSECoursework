@@ -31,9 +31,34 @@ home = [40,20, 0]                                                               
 charge_threshold = 0.20    
 
 
+
+# Helper function to return fraction of remaining charge
+def bot_helper_get_charge(bot) -> float:
+  return (bot.soc / bot.max_soc)
+
+# Helper function to find and choose the nearest charger
+def charge_from_nearest(bot, chargers):
+  # Prior to being assigned a task, check charge
+  nearest_charger = choose_charger(bot, es.chargers)
+  print(f'Nearest Charger Index: {nearest_charger}')
+  if (nearest_charger != -1):
+    bot.charge(es.charges()[nearest_charger])
+  else:
+    print("[ERROR]: No charger found?")
+    quit()
+  
 def choose_charger(bot, chargers) -> int:                                        # this is the soc percentage at which bots will decide to charge. This can be optimised and varied for each kind (see stretch objective)                               
-    # Return the index of the nearest charger
-    return 5
+    # Return the index of the nearest charger#
+    
+    min_dist = math.inf
+    min_index = -1
+    
+    for index, charger in enumerate(chargers):
+      dist = distance(charger, bot.coordinate)
+      if (dist < min_dist):
+        min_dist = dist
+        min_index = index
+    return min_index
 
 
 def is_pizza_in_weight(pizza, bot):
