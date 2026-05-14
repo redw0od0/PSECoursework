@@ -15,8 +15,6 @@ const unsigned int sampling_duration_sec = 180;
 // Capitalisation helps me to differentiate these global variables and constants from local variables
 // that may have similar names
 const size_t SAMPLE_COUNT = sampling_freq_hz * sampling_duration_sec;
-float TEMP_DATA[SAMPLE_COUNT];
-float TIME_DATA[SAMPLE_COUNT];
 
 
 float temperature_read()
@@ -28,22 +26,35 @@ float temperature_read()
   return temperature;
 }
 
-void record_temperatures(){
+void record_temperatures()
+{
+  unsigned long delay_ms = 1000 / sampling_freq_hz;
 
-  unsigned long start_time = millis();
+  Serial.println("Time,Temperature");
 
-  float delay_ms = 1000 / sampling_freq_hz; // Avoid recalculating within the loop
-  for (size_t i = 0; i < SAMPLE_COUNT; i++){
-    unsigned long current_time = millis();
-    float dt = (current_time - start_time) / 1000.0f;
-    TEMP_DATA[i] = temperature_read();
-    TIME_DATA[i] = dt;
+  for (size_t i = 0; i < SAMPLE_COUNT; i++)
+  {
+    float t = i / (float)sampling_freq_hz;
+    float temp = temperature_read();
+
+    Serial.print(t);
+    Serial.print(",");
+    Serial.println(temp);
+    // Saves memory by writing tempertatues directly to serial without storing in a static buffer
     delay(delay_ms);
   }
 }
 
-void setup(){
-  Serial.begin(9600);
+void setup()
+{
+    Serial.begin(9600);
 
-  record_temperatures();
+    delay(2000);
+
+    record_temperatures();
+}
+
+
+void loop(){
+  // Do nothing
 }

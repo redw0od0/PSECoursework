@@ -20,7 +20,8 @@ typedef enum{
 } PwrState;
 
 
-#define MAX_SAMPLES 32
+
+#define MAX_SAMPLES 300
 float temperature_data[MAX_SAMPLES];
 float dft_magnitude[MAX_SAMPLES];
 float dft_frequency[MAX_SAMPLES];
@@ -88,10 +89,6 @@ PwrState decide_power_mode(float f){
   return PWR_DOWN;
 }
 
-
-
-
-
 float adjust_sample_rate(float dominant_freq){
   float f = 2.0 * dominant_freq; // Nyquist theorem, minimum safe frequency// ===================== ADAPTIVE SAMPLING =====================
   
@@ -138,7 +135,7 @@ void loop()
   static float sampling_rate = 1.0;
   PwrState mode;
 
-  int N = 120; // ~2 minutes at 1 Hz baseline
+  int N = MAX_SAMPLES; // ~2 minutes at 1 Hz baseline
 
   float sample_interval = 1000.0 / sampling_rate;
 
