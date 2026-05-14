@@ -36,16 +36,21 @@ def choose_charger(bot, chargers) -> int:                                       
     return 5
 
 
+def is_pizza_in_weight(pizza, bot):
+  return pizza.weight <= (bot.max_payload - bot.payload)
+
 def find_nearest_pizza(bot, pizzas) -> int:
 
   dist_min = math.inf
+  nearest_pizza = -1 # Potentially a cause of crashing / failed interpretation - add bounds checking on access
   
-  
-  for pizza in pizzas:
+  for pizza_index, pizza in enumerate(pizzas):
     dist = distance(pizza.coordinates, bot.coordinates)
     if (dist < dist_min):
       dist_min = dist
-    
+      nearest_pizza = pizza_index
+  
+  return pizza_index
 
 while es.active:
   for bot in es.bots():
@@ -57,16 +62,17 @@ while es.active:
       # ISSUE - Optimise by charging near a station when no pizzas are near
       bot.charge(charger)                                                       # initiate charging.
     if bot.activity == 'idle':                                                  # if bot is idle, contract to deliver a ready pizza.
-      for pizza in es.deliverables():
+        pizza_index = find_nearest_pizza(bot, es.deliverables())
+        pizza = es.deliverables[pizza_index]
         # Optimisation - Only attempt pizzas of the correct weight
         pizza_under_weight = pizza.weight <= (bot.max_payload - bot.payload)
         if pizza.status and pizza_under_weight == 'ready':
           # ISSUE - non optimal, choose correct bot type
           bot.deliver(pizza)                                             # ensure we do not contract to deliver a pizza already contracted by another bot
           break
-      if not bot.destination and bot.coordinates != home:
-        # IF A SLOWER BOT IS EN ROUTE, FASTER BOT TAKES OVER
-        bot.target_destination = home                                           # if we get here, we've gone through the list of pizzas and none was ready
+        if not bot.destination and bot.coordinates != home:
+          # IF A SLOWER BOT IS EN ROUTE, FASTER BOT TAKES OVER
+          bot.target_destination = home                                           # if we get here, we've gone through the list of pizzas and none was ready
     if bot.target_destination:bot.move()                                        # move whilst we have a destination. At the end of delivery, the bot status will be set to idle
 
   es.update()                                                                   # update when all bots have been processed and moved
