@@ -384,7 +384,7 @@ class Drone(Bot):
   ### Constructor ##############################################################
   def __init__(self, **kwargs):
     super().__init__()  #get the Bot defaults
-
+ 
     self.color =         'yellow'             #  (w) arena display colour
     self.resources =     [5, 4, 70, 1, 20, 1] #  (r) Percent materials and energy
     self.shape =         'triangle'           #  (w) arena display shape

@@ -33,10 +33,21 @@ charge_threshold = 0.20
 
 def choose_charger(bot, chargers) -> int:                                        # this is the soc percentage at which bots will decide to charge. This can be optimised and varied for each kind (see stretch objective)                               
     # Return the index of the nearest charger
+    return 5
 
+
+def find_nearest_pizza(bot, pizzas) -> int:
+
+  dist_min = math.inf
+  
+  
+  for pizza in pizzas:
+    dist = distance(pizza.coordinates, bot.coordinates)
+    if (dist < dist_min):
+      dist_min = dist
+    
 
 while es.active:
-
   for bot in es.bots():
 
     #create_deliverables(es)                                                     # Use the create deliverables function to maintain a stock of ready pizzas
@@ -47,9 +58,11 @@ while es.active:
       bot.charge(charger)                                                       # initiate charging.
     if bot.activity == 'idle':                                                  # if bot is idle, contract to deliver a ready pizza.
       for pizza in es.deliverables():
-        if pizza.status == 'ready':
+        # Optimisation - Only attempt pizzas of the correct weight
+        pizza_under_weight = pizza.weight <= (bot.max_payload - bot.payload)
+        if pizza.status and pizza_under_weight == 'ready':
           # ISSUE - non optimal, choose correct bot type
-          bot.deliver(pizza)                                                    # ensure we do not contract to deliver a pizza already contracted by another bot
+          bot.deliver(pizza)                                             # ensure we do not contract to deliver a pizza already contracted by another bot
           break
       if not bot.destination and bot.coordinates != home:
         # IF A SLOWER BOT IS EN ROUTE, FASTER BOT TAKES OVER
