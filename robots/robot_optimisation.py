@@ -17,15 +17,15 @@ plt.ion()         # interactive mode ON (non-blocking windows)
 # Create and configure the ecosystem using the factory function. 
 # Study the factory function code to understand how the ecosystem is being created 
 # and configured. Adjust the parameters as needed for your testing and development.  
-es = ecofactory(robots = 3, droids = 3, drones = 3, chargers = [55,20], pizzas = 9)
+es = ecofactory(robots = 3, droids = 3, drones = 3, chargers = ([55,20], [10, 10]), pizzas = 9)
 
 
 
 charger = es.chargers()[0]
-es.display(show = 0, pause = 10)                                                # show = 0 will turn off the display and speed up the run. Set to 1 for development and debugging, set to 0 for final runs. Note that when show = 0, you will not see the ecosystem or any messages, so it is wise to turn on messages (es.messages_on = True) when show = 0 for development and debugging. 
+es.display(show = 1, pause = 2)                                                # show = 0 will turn off the display and speed up the run. Set to 1 for development and debugging, set to 0 for final runs. Note that when show = 0, you will not see the ecosystem or any messages, so it is wise to turn on messages (es.messages_on = True) when show = 0 for development and debugging. 
 es.debug = True                                                            # this will directly display damage and warning messages. Note show needs to be zero  (show = 0)
 es.messages_on = False                                                          # over 52 weeks it is wise to turn messages off as there are too many. But when researching turn on for shorter runs
-es.duration = "52 week"                                                          # We are aiming to run for a year with minimum or no bot breakages
+es.duration = "1 week"                                                          # We are aiming to run for a year with minimum or no bot breakages
 
 home = [40,20, 0]                                                               # Place to which bots will return when idle and from which they will start. This is also the location of the charger in this example, but it doesn't have to be. You can change this and the charger location to test the bots' ability to navigate around the ecosystem.
 charge_threshold = 0.20    
@@ -33,39 +33,82 @@ charge_threshold = 0.20
 
 
 # Helper function to return fraction of remaining charge
-def bot_helper_get_charge(bot) -> float:
+def bot_get_charge(bot) -> float:
   return (bot.soc / bot.max_soc)
 
-# Helper function to find and choose the nearest charger
-def charge_from_nearest(bot, chargers):
-  # Prior to being assigned a task, check charge
-  nearest_charger = choose_charger(bot, es.chargers)
-  print(f'Nearest Charger Index: {nearest_charger}')
-  if (nearest_charger != -1):
-    bot.charge(es.charges()[nearest_charger])
-  else:
-    print("[ERROR]: No charger found?")
-    quit()
+
   
-def choose_charger(bot, chargers) -> int:                                        # this is the soc percentage at which bots will decide to charge. This can be optimised and varied for each kind (see stretch objective)                               
+
+def choose_charger(bot, chargers) -> int:                                                                    
     # Return the index of the nearest charger#
     
     min_dist = math.inf
     min_index = -1
     
     for index, charger in enumerate(chargers):
-      dist = distance(charger, bot.coordinate)
+      dist = distance(charger.coordinates, bot.coordinates)
       if (dist < min_dist):
         min_dist = dist
         min_index = index
     return min_index
 
 
+# Returns true if a bot has enough charge to complete a job and return to the nearest charger
+def has_charge_to_start_job(bot, pizza) -> bool:
+
+  total_dist = (
+    distance(bot.coordinates, pizza.coordinates) +
+    distance(pizza.coordinates, pizza.destination)
+  )
+
+  weight = bot.payload + pizza.weight
+
+  energy_needed = energy_consumption(weight, bot.max_speed, bot.volitant) * total_dist
+
+  nearest = choose_charger(bot, es.chargers())
+  charger = es.chargers()[nearest]
+  charger_dist = distance(charger.coordinates, bot.coordinates)
+
+  energy_needed += energy_consumption(bot.payload, bot.max_speed, bot.volitant) * charger_dist
+
+  return energy_needed < bot.soc * 0.9
+
+# Helper function to find and choose the nearest charger
+def charge_from_nearest(bot, chargers):
+  # Prior to being assigned a task, check charge
+  nearest_charger = choose_charger(bot, es.chargers())
+  #print(f'Nearest Charger Index: {nearest_charger}')
+  if (nearest_charger != -1):
+    bot.charge(es.chargers()[nearest_charger])
+  else:
+    print("[ERROR]: No charger found?")
+    quit()
+  
+# Returns true if the first bot can take over the second's job and complete it in a shorter time
+def compare_bot_time(bot_main, bot_second, pizza) -> bool:
+  # Avoid zero division
+  speed_main = max(bot_main.max_speed, 1e-6)
+  speed_second = max(bot_second.max_speed, 1e-6)
+
+  # Bot 1 takes over bot 2's job
+  main_cost = (
+    distance(bot_main.coordinates, pizza.coordinates) +
+    distance(pizza.coordinates, pizza.destination)
+  ) / speed_main
+
+  # Bot 2 keeps job
+  second_cost = (
+    distance(bot_second.coordinates, pizza.coordinates) +
+    distance(pizza.coordinates, pizza.destination)
+  ) / speed_second
+
+  return main_cost < second_cost
+
+
 def is_pizza_in_weight(pizza, bot):
   return pizza.weight <= (bot.max_payload - bot.payload)
 
 def find_nearest_pizza(bot, pizzas) -> int:
-
   dist_min = math.inf
   nearest_pizza = -1 # Potentially a cause of crashing / failed interpretation - add bounds checking on access
   
@@ -79,7 +122,6 @@ def find_nearest_pizza(bot, pizzas) -> int:
     if (dist < dist_min):
       dist_min = dist
       nearest_pizza = pizza_index
-  
   return nearest_pizza
 
 while es.active:
@@ -87,13 +129,15 @@ while es.active:
 
     #create_deliverables(es)                                                     # Use the create deliverables function to maintain a stock of ready pizzas
 
-    if bot.soc / bot.max_soc < charge_threshold and bot.station is None:  
+    if bot_get_charge(bot) < charge_threshold and bot.station is None:  
       # decision to charge when percent soc = 20%. This can be optimised and varied for each kind (see stretch objective)
       # ISSUE - Optimise by charging near a station when no pizzas are near
-      bot.charge(charger)                                                       # initiate charging.
+      charge_from_nearest(bot, es.chargers())
+      #bot.charge(charger)                                                       # initiate charging.
     if bot.activity == 'idle':                                                  # if bot is idle, contract to deliver a ready pizza.
+        # Optimisation - use nearest pizza
         pizza_index = find_nearest_pizza(bot, es.deliverables())
-        if pizza_index == -1:
+        if pizza_index == -1 or (not has_charge_to_start_job(bot, es.deliverables()[pizza_index])): # Boundary checking to avoid crashing
           continue
         pizza = es.deliverables()[pizza_index]
         # Optimisation - Only attempt pizzas of the correct weight
