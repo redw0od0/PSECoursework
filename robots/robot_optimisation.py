@@ -12,6 +12,13 @@ import matplotlib.pyplot as plt
 plt.close('all')
 plt.ion()
 
+WORKLOAD_BONUS_DELTA = 0.05
+WORKLOAD_BONUS_ADD_TRIGGER = 8 # 8 pizzas to trigger addition
+WORKLOAD_BONUS_DEDUCT_TRIGGER = 3 # < 3 pizzas to trigger deduction
+
+WORKLOAD_TRAVELRISK_SCALE = (1.0 / 60.0)
+
+
 
 def bot_get_charge(bot) -> float:
   return bot.soc / bot.max_soc
@@ -55,6 +62,23 @@ def has_charge_to_start_job(bot, pizza) -> bool:
 
   return energy_needed < bot.soc * 0.99
 
+def should_opportunistic_charge(bot):
+
+  if bot.activity != "delivering":
+    return False
+
+  if bot_get_charge(bot) > 0.7:
+    return False
+
+  for charger in es.chargers():
+
+    dist = distance(bot.coordinates, charger.coordinates)
+
+    if dist < 5:
+      return True
+
+  return False
+
 def dynamic_charge_threshold(bot):
 
   chargers = es.chargers()
@@ -69,7 +93,7 @@ def dynamic_charge_threshold(bot):
   dist_to_charger = distance(bot.coordinates, charger.coordinates)
 
   # normalised travel risk
-  travel_risk = dist_to_charger / 60.0
+  travel_risk = dist_to_charger * WORKLOAD_TRAVELRISK_SCALE
 
   # drone penalty
   if bot.volitant:
@@ -87,10 +111,10 @@ def dynamic_charge_threshold(bot):
 
   workload_bonus = 0
 
-  if ready_pizzas > 8:
-    workload_bonus -= 0.05
-  elif ready_pizzas < 3:
-    workload_bonus += 0.05
+  if ready_pizzas > WORKLOAD_BONUS_ADD_TRIGGER:
+    workload_bonus -= WORKLOAD_BONUS_DELTA
+  elif ready_pizzas < WORKLOAD_BONUS_DEDUCT_TRIGGER:
+    workload_bonus += WORKLOAD_BONUS_DELTA
 
   threshold = (
     base +
@@ -206,6 +230,10 @@ def run_modified(duration):
           charge_from_nearest(bot)
           continue
         bot.move()
+        
+        if should_opportunistic_charge(bot):
+          charge_from_nearest(bot)
+          continue
 
     es.update()
 
