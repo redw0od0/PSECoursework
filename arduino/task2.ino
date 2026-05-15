@@ -21,7 +21,7 @@ typedef enum{
 
 
 
-#define MAX_SAMPLES 300
+#define MAX_SAMPLES 25
 float temperature_data[MAX_SAMPLES];
 float dft_magnitude[MAX_SAMPLES];
 float dft_frequency[MAX_SAMPLES];
